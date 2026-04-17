@@ -16,3 +16,9 @@
 ## GitHub Pages
 
 如果把这个仓库启用 GitHub Pages，站点首页就是仓库根目录的 `index.html`，游戏入口在 `play/index.html`。
+
+## 体验优化
+
+- 支持系统的 `prefers-reduced-motion`，低动效模式会自动减少特效和抖动
+- Canvas 做了 DPR 上限和自动 resize，手机上更稳一点
+- 移动端和低动效模式会自动降低初始物件密度，减少卡顿

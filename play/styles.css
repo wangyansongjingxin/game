@@ -21,6 +21,7 @@ body {
   min-height: 100vh;
   font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
   color: var(--ink);
+  overscroll-behavior: none;
   background:
     radial-gradient(circle at top left, rgba(116, 228, 197, 0.35), transparent 28%),
     radial-gradient(circle at top right, rgba(108, 124, 255, 0.20), transparent 35%),
@@ -185,6 +186,14 @@ h1 { margin: 0; font-size: clamp(32px, 5vw, 54px); }
   cursor: pointer;
   transition: .2s ease;
   font: inherit;
+}
+
+.ghost-btn:focus-visible,
+.mode-btn:focus-visible,
+.mode-mini-btn:focus-visible,
+.sound-btn:focus-visible {
+  outline: 3px solid rgba(108, 124, 255, 0.38);
+  outline-offset: 3px;
 }
 
 .ghost-btn {
@@ -727,5 +736,36 @@ canvas {
 
   .playground-wrap {
     padding: 10px;
+  }
+
+  canvas {
+    height: min(56vh, 520px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghost-btn,
+  .mode-btn,
+  .mode-mini-btn,
+  .sound-btn {
+    transition: none;
+  }
+
+  .ghost-btn:hover,
+  .mode-btn:hover,
+  .mode-mini-btn:hover,
+  .sound-btn:hover {
+    transform: none;
+  }
+
+  .playground-wrap.shake-soft,
+  .playground-wrap.shake-strong {
+    animation: none !important;
+  }
+
+  .overlay-tip,
+  .toast,
+  .summary-modal {
+    backdrop-filter: none;
   }
 }

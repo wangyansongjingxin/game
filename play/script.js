@@ -87,6 +87,7 @@ const state = {
   transitionLabel: '',
   comboFever: 0,
   comboFeverActive: false,
+  reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   sketchDrawing: false,
   lastSketchPoint: null,
   sketchTargets: [],
@@ -277,12 +278,27 @@ const ACHIEVEMENTS = [
 
 function resizeCanvas() {
   const rect = canvas.getBoundingClientRect();
-  const ratio = window.devicePixelRatio || 1;
-  canvas.width = rect.width * ratio;
-  canvas.height = rect.height * ratio;
+  if (!rect.width || !rect.height) return;
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.max(1, Math.round(rect.width * ratio));
+  canvas.height = Math.max(1, Math.round(rect.height * ratio));
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 }
+const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+function syncReducedMotionPreference(event) {
+  state.reduceMotion = event.matches;
+}
+syncReducedMotionPreference(reducedMotionQuery);
+if (typeof reducedMotionQuery.addEventListener === 'function') {
+  reducedMotionQuery.addEventListener('change', syncReducedMotionPreference);
+} else if (typeof reducedMotionQuery.addListener === 'function') {
+  reducedMotionQuery.addListener(syncReducedMotionPreference);
+}
 window.addEventListener('resize', resizeCanvas);
+if (window.ResizeObserver) {
+  const canvasResizeObserver = new ResizeObserver(() => resizeCanvas());
+  canvasResizeObserver.observe(canvas);
+}
 resizeCanvas();
 
 function random(min, max) {
@@ -290,6 +306,10 @@ function random(min, max) {
 }
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function motionScale() {
+  return state.reduceMotion ? 0.6 : 1;
 }
 
 function ensureAudio() {
@@ -1126,7 +1146,7 @@ function showComboBreak(comboCount) {
   clearTimeout(showComboBreak.timer);
   showComboBreak.timer = setTimeout(() => {
     comboBreakEl.classList.add('hidden');
-  }, 1400);
+  }, state.reduceMotion ? 1000 : 1400);
 }
 
 function pickSummaryLine() {
@@ -1203,80 +1223,86 @@ function resetRun(mode = state.mode) {
 }
 
 function pulseWrap(kind = 'soft') {
-  if (!playgroundWrap) return;
+  if (!playgroundWrap || state.reduceMotion) return;
   playgroundWrap.classList.remove('shake-soft', 'shake-strong');
   void playgroundWrap.offsetWidth;
   playgroundWrap.classList.add(kind === 'strong' ? 'shake-strong' : 'shake-soft');
 }
 
 function vibrate(ms = 18) {
-  if (navigator.vibrate) navigator.vibrate(ms);
+  if (!state.reduceMotion && navigator.vibrate) navigator.vibrate(ms);
 }
 
 function createBurst(x, y, hue, amount = 14) {
-  for (let i = 0; i < amount; i++) {
+  const motion = motionScale();
+  const burstCount = Math.max(3, Math.round(amount * motion));
+  for (let i = 0; i < burstCount; i++) {
     const angle = random(0, Math.PI * 2);
-    const speed = random(1.4, 5.4);
+    const speed = random(1.4, 5.4) * motion;
     state.particles.push({
       x,
       y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      life: random(28, 54),
-      maxLife: 54,
-      size: random(3, 9),
+      life: random(28, 54) * motion,
+      maxLife: 54 * motion,
+      size: random(3, 9) * motion,
       hue,
-      gravity: random(0.01, 0.08),
+      gravity: random(0.01, 0.08) * motion,
       shape: Math.random() > 0.72 ? 'spark' : 'dot',
-      spin: random(-0.18, 0.18),
+      spin: random(-0.18, 0.18) * motion,
       rot: random(0, Math.PI * 2),
     });
   }
 }
 
 function createRing(x, y, hue, size = 24, width = 8) {
+  const motion = motionScale();
   state.rings.push({
     x,
     y,
     hue,
-    r: size,
-    width,
-    life: 24,
-    maxLife: 24,
+    r: size * motion,
+    width: width * motion,
+    life: 24 * motion,
+    maxLife: 24 * motion,
   });
 }
 
 function createHitText(x, y, text, hue = 20) {
+  const motion = motionScale();
   state.hitTexts.push({
     x,
     y,
     text,
     hue,
-    vy: random(0.8, 1.6),
-    life: 30,
-    maxLife: 30,
-    size: random(18, 26),
+    vy: random(0.8, 1.6) * motion,
+    life: 30 * motion,
+    maxLife: 30 * motion,
+    size: random(18, 26) * motion,
   });
 }
 
 function impact(x, y, { flash = 0.16, ringHue = 32, ringSize = 28, text = '', textHue = 32 } = {}) {
-  state.flash = Math.max(state.flash, flash);
-  state.comboPulse = Math.max(state.comboPulse, 0.3 + Math.min(state.combo, 18) * 0.02);
-  state.cameraKick = Math.max(state.cameraKick, 0.8 + Math.min(state.combo, 12) * 0.08);
-  state.backgroundShift = Math.max(state.backgroundShift, 0.25 + Math.min(state.combo, 12) * 0.04);
-  createRing(x, y, ringHue, ringSize, 7 + Math.min(state.combo, 10) * 0.5);
+  const motion = motionScale();
+  state.flash = Math.max(state.flash, flash * motion);
+  state.comboPulse = Math.max(state.comboPulse, (0.3 + Math.min(state.combo, 18) * 0.02) * motion);
+  state.cameraKick = Math.max(state.cameraKick, (0.8 + Math.min(state.combo, 12) * 0.08) * motion);
+  state.backgroundShift = Math.max(state.backgroundShift, (0.25 + Math.min(state.combo, 12) * 0.04) * motion);
+  createRing(x, y, ringHue, ringSize * motion, (7 + Math.min(state.combo, 10) * 0.5) * motion);
   if (text) createHitText(x, y - 6, text, textHue);
 }
 
 function createTrail(x, y, hue, size = 28, alpha = 0.2) {
+  const motion = motionScale();
   state.trails.push({
     x,
     y,
     hue,
-    size,
-    alpha,
-    life: 18,
-    maxLife: 18,
+    size: size * motion,
+    alpha: alpha * motion,
+    life: 18 * motion,
+    maxLife: 18 * motion,
   });
 }
 
@@ -1292,6 +1318,7 @@ function getImpactTier() {
 }
 
 function applyImpactFx(x, y, hue, tier, texts) {
+  const motion = motionScale();
   if (tier === 'critical') {
     createBurst(x, y, hue, 36);
     createTrail(x, y, hue, 64, 0.34);
@@ -1302,8 +1329,8 @@ function applyImpactFx(x, y, hue, tier, texts) {
       text: pick(texts.critical),
       textHue: hue,
     });
-    state.cameraKick = Math.max(state.cameraKick, 2.6);
-    state.backgroundShift = Math.max(state.backgroundShift, 0.85);
+    state.cameraKick = Math.max(state.cameraKick, 2.6 * motion);
+    state.backgroundShift = Math.max(state.backgroundShift, 0.85 * motion);
   } else if (tier === 'heavy') {
     createBurst(x, y, hue, 24);
     createTrail(x, y, hue, 42, 0.24);
@@ -1336,7 +1363,7 @@ function addScore(base) {
   scoreEl.textContent = state.score;
   comboEl.textContent = state.combo;
   updateBestScore();
-  state.comboPulse = Math.max(state.comboPulse, 0.18 + Math.min(state.combo, 20) * 0.018);
+  state.comboPulse = Math.max(state.comboPulse, (0.18 + Math.min(state.combo, 20) * 0.018) * motionScale());
 
   const feverNow = state.combo >= 10;
   state.comboFeverActive = feverNow;
@@ -1353,7 +1380,7 @@ function showToast(text) {
   toastEl.textContent = text;
   toastEl.classList.remove('hidden');
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => toastEl.classList.add('hidden'), 1300);
+  showToast.timer = setTimeout(() => toastEl.classList.add('hidden'), state.reduceMotion ? 950 : 1300);
 }
 
 function spawnBubble() {
@@ -1426,7 +1453,7 @@ function collectSketchTarget(target) {
   showToast(`连到星星了：${state.sketchCollected}`);
   playCalmChime();
   advanceDailyChallenge(1, 'sketch');
-  if (state.sketchTargets.length < 7) spawnSketchTarget();
+  if (state.sketchTargets.length < (state.reduceMotion ? 5 : 7)) spawnSketchTarget();
   evaluateAchievements();
 }
 
@@ -1500,12 +1527,13 @@ function setMode(mode) {
   modeBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
   calmTextEl.textContent = modeMeta[mode]?.calm || '先慢一点，别急。';
 
-  for (let i = 0; i < 8; i++) {
+  const starterCount = state.reduceMotion ? 5 : 8;
+  for (let i = 0; i < starterCount; i++) {
     if (mode === 'bubble') spawnBubble();
     if (mode === 'worry') spawnWorry();
   }
-  if (mode === 'squish') for (let i = 0; i < 5; i++) spawnBlob();
-  if (mode === 'sketch') for (let i = 0; i < 7; i++) spawnSketchTarget();
+  if (mode === 'squish') for (let i = 0; i < (state.reduceMotion ? 3 : 5); i++) spawnBlob();
+  if (mode === 'sketch') for (let i = 0; i < (state.reduceMotion ? 5 : 7); i++) spawnSketchTarget();
   markModeVisited(mode);
   renderDailyChallenge();
   saveSettings();
@@ -1763,7 +1791,9 @@ function update() {
   }
 
   if (state.mode === 'bubble') {
-    if (now - state.lastSpawnAt > 420 && state.bubbles.length < 15) {
+    const bubbleSpawnInterval = state.reduceMotion ? 540 : 420;
+    const bubbleCap = state.reduceMotion ? 10 : 15;
+    if (now - state.lastSpawnAt > bubbleSpawnInterval && state.bubbles.length < bubbleCap) {
       spawnBubble();
       state.lastSpawnAt = now;
     }
@@ -1780,7 +1810,9 @@ function update() {
       }
     });
   } else if (state.mode === 'worry') {
-    if (now - state.lastSpawnAt > 900 && state.worries.length < 10) {
+    const worrySpawnInterval = state.reduceMotion ? 1200 : 900;
+    const worryCap = state.reduceMotion ? 7 : 10;
+    if (now - state.lastSpawnAt > worrySpawnInterval && state.worries.length < worryCap) {
       spawnWorry();
       state.lastSpawnAt = now;
     }
@@ -1804,7 +1836,9 @@ function update() {
       }
     });
   } else if (state.mode === 'sketch') {
-    if (now - state.lastSpawnAt > 1000 && state.sketchTargets.length < 7) {
+    const sketchSpawnInterval = state.reduceMotion ? 1300 : 1000;
+    const sketchCap = state.reduceMotion ? 5 : 7;
+    if (now - state.lastSpawnAt > sketchSpawnInterval && state.sketchTargets.length < sketchCap) {
       spawnSketchTarget();
       state.lastSpawnAt = now;
     }
@@ -1817,14 +1851,22 @@ function update() {
     });
   }
 
-  state.woodfishScale += (1 - state.woodfishScale) * 0.15;
-  state.woodfishGlow *= 0.92;
-  state.flash *= 0.88;
-  state.comboPulse *= 0.9;
-  state.cameraKick *= 0.86;
-  state.backgroundShift *= 0.92;
-  state.transition *= 0.88;
-  state.comboFever *= state.comboFeverActive ? 0.985 : 0.94;
+  const settle = state.reduceMotion ? 0.08 : 0.15;
+  const glowFalloff = state.reduceMotion ? 0.86 : 0.92;
+  const flashFalloff = state.reduceMotion ? 0.84 : 0.88;
+  const pulseFalloff = state.reduceMotion ? 0.86 : 0.9;
+  const cameraFalloff = state.reduceMotion ? 0.8 : 0.86;
+  const shiftFalloff = state.reduceMotion ? 0.88 : 0.92;
+  const transitionFalloff = state.reduceMotion ? 0.84 : 0.88;
+  const feverFalloff = state.reduceMotion ? 0.97 : (state.comboFeverActive ? 0.985 : 0.94);
+  state.woodfishScale += (1 - state.woodfishScale) * settle;
+  state.woodfishGlow *= glowFalloff;
+  state.flash *= flashFalloff;
+  state.comboPulse *= pulseFalloff;
+  state.cameraKick *= cameraFalloff;
+  state.backgroundShift *= shiftFalloff;
+  state.transition *= transitionFalloff;
+  state.comboFever *= feverFalloff;
 
   state.particles = state.particles.filter(p => p.life > 0);
   state.particles.forEach(p => {
@@ -2190,7 +2232,7 @@ function drawHitTexts() {
 }
 
 function drawPointerAura() {
-  if (!state.pointer.down) return;
+  if (!state.pointer.down || state.reduceMotion) return;
   ctx.beginPath();
   ctx.fillStyle = 'rgba(108,124,255,0.12)';
   ctx.arc(state.pointer.x, state.pointer.y, 28, 0, Math.PI * 2);
@@ -2198,7 +2240,7 @@ function drawPointerAura() {
 }
 
 function drawFeverHud() {
-  if (state.combo < 10 && state.comboFever < 0.08) return;
+  if (state.reduceMotion || (state.combo < 10 && state.comboFever < 0.08)) return;
   const w = canvas.clientWidth;
   const label = state.combo >= 15 ? 'FEVER' : 'HOT COMBO';
   const alpha = Math.min(0.9, 0.22 + state.comboFever * 0.45);
