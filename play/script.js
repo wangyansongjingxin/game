@@ -12,7 +12,9 @@ const calmBtn = document.getElementById('calmBtn');
 const soundBtn = document.getElementById('soundBtn');
 const startScreen = document.getElementById('startScreen');
 const startBtn = document.getElementById('startBtn');
+const startResumeBtn = document.getElementById('startResumeBtn');
 const startWoodfishBtn = document.getElementById('startWoodfishBtn');
+const startHintEl = document.getElementById('startHint');
 const playgroundWrap = document.querySelector('.playground-wrap');
 const modeBtns = [...document.querySelectorAll('.mode-btn')];
 const modeIconEl = document.getElementById('modeIcon');
@@ -93,6 +95,8 @@ const state = {
   sketchTargets: [],
   sketchCollected: 0,
 };
+
+let rememberedStartMode = 'bubble';
 
 const calmingLines = [
   '你不是机器，偶尔卡一下很正常。',
@@ -1549,6 +1553,11 @@ startBtn.addEventListener('click', () => {
   playCalmChime();
   resetRun('bubble');
 });
+startResumeBtn.addEventListener('click', () => {
+  hideStartScreen();
+  playCalmChime();
+  resetRun(rememberedStartMode);
+});
 startWoodfishBtn.addEventListener('click', () => {
   hideStartScreen();
   playCalmChime();
@@ -2338,6 +2347,15 @@ if (Array.isArray(savedSettings.visitedModes)) {
 state.unlockedAchievements = new Set(loadAchievements());
 state.runHistory = loadRunHistory();
 
+rememberedStartMode = modeMeta[savedSettings.mode] ? savedSettings.mode : 'bubble';
+if (startResumeBtn) {
+  startResumeBtn.textContent = '继续上次模式';
+  startResumeBtn.title = `上次模式：${modeMeta[rememberedStartMode].title}`;
+}
+if (startHintEl) {
+  startHintEl.textContent = `上次停在 ${modeMeta[rememberedStartMode].title}，这次可以接着来。`;
+}
+
 state.bestScore = loadBestScore();
 bestScoreEl.textContent = state.bestScore;
 loadDailyChallenge();
@@ -2350,11 +2368,11 @@ evaluateAchievements();
 
 window.addEventListener('keydown', (event) => {
   if (event.repeat) return;
-  if (event.key === '1') resetRun('bubble');
-  if (event.key === '2') resetRun('worry');
-  if (event.key === '3') resetRun('squish');
-  if (event.key === '4') resetRun('woodfish');
-  if (event.key === '5') resetRun('sketch');
+if (event.key === '1') resetRun('bubble');
+if (event.key === '2') resetRun('worry');
+if (event.key === '3') resetRun('squish');
+if (event.key === '4') resetRun('woodfish');
+if (event.key === '5') resetRun('sketch');
   if (event.key === 'Escape' && !summaryModal.classList.contains('hidden')) {
     closeSummary();
   }
@@ -2372,5 +2390,5 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
-setMode(modeMeta[savedSettings.mode] ? savedSettings.mode : 'bubble');
+setMode(rememberedStartMode);
 loop();

@@ -79,6 +79,14 @@ body {
   padding-inline: 20px;
 }
 
+.start-hint {
+  margin: 16px auto 0;
+  max-width: 34em;
+  color: var(--soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .topbar, .stats, .modes, .bottom-panels {
   display: grid;
   gap: 16px;

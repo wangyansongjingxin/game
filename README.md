@@ -8,6 +8,8 @@
 - `play/index.html`：游戏本体
 - `play/script.js`：游戏逻辑
 - `play/styles.css`：游戏样式
+- `tools/relax-room-release/`：这个项目的发布检查 skill
+- `tools/relax-room-release.skill`：打包好的 skill 文件
 
 ## 本地打开
 
