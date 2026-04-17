@@ -11,7 +11,7 @@
     <div class="start-card card">
       <p class="eyebrow">欢迎来到解压现场</p>
       <h2>3分钟解压屋</h2>
-      <p class="start-copy">四个模式随便挑：点气泡、炸烦恼、甩果冻、敲木鱼。目标不是通关，是把脑袋里的毛线团先理顺一点。</p>
+      <p class="start-copy">五个模式随便挑：点气泡、炸烦恼、甩果冻、敲木鱼、连星星。目标不是通关，是把脑袋里的毛线团先理顺一点。</p>
       <div class="start-badges">
         <span>轻松上手</span>
         <span>支持手机</span>
@@ -58,6 +58,7 @@
       <button class="mode-btn" data-mode="worry">烦恼粉碎机</button>
       <button class="mode-btn" data-mode="squish">拖拽果冻</button>
       <button class="mode-btn" data-mode="woodfish">电子木鱼</button>
+      <button class="mode-btn" data-mode="sketch">星轨连线</button>
     </section>
 
     <section class="mode-hero card">
@@ -71,8 +72,31 @@
       </div>
       <div class="mode-hero-actions">
         <button id="summaryBtn" class="mode-mini-btn">本轮总结</button>
+        <button id="pauseBtn" class="mode-mini-btn subtle">暂停</button>
         <button id="resetBtn" class="mode-mini-btn subtle">重新开一轮</button>
       </div>
+    </section>
+
+    <section class="daily-panel card">
+      <div class="daily-header">
+        <div>
+          <p class="eyebrow">今日挑战</p>
+          <h2 id="dailyTitle">加载中</h2>
+        </div>
+        <span id="dailyStatus" class="daily-status">进行中</span>
+      </div>
+      <p id="dailyMode" class="daily-mode">—</p>
+      <p id="dailyDesc" class="daily-desc">今天的目标会根据日期自动变化。</p>
+      <div class="daily-progress">
+        <div class="progress-bar daily-progress-bar">
+          <div id="dailyProgressFill" class="progress-fill"></div>
+        </div>
+        <div class="daily-progress-meta">
+          <span id="dailyProgressText">0 / 0</span>
+          <button id="dailyJumpBtn" class="mode-mini-btn subtle">去完成</button>
+        </div>
+      </div>
+      <p id="dailyReward" class="daily-reward">完成后会拿到一个小奖励。</p>
     </section>
 
     <main class="playground-wrap card">
@@ -92,6 +116,17 @@
         <h2>轻松提示</h2>
         <p id="calmText">今天先别要求自己完美，先把一口气呼出来。</p>
       </div>
+    </section>
+
+    <section class="achievement-panel card">
+      <div class="achievement-header">
+        <div>
+          <p class="eyebrow">成就墙</p>
+          <h2>今天拿到的奖励</h2>
+        </div>
+        <span id="achievementCount" class="achievement-count">0 / 8</span>
+      </div>
+      <div id="achievementList" class="achievement-list"></div>
     </section>
   </div>
 
@@ -116,9 +151,27 @@
           <span>木鱼次数</span>
           <strong id="summaryWoodfish">0</strong>
         </div>
+        <div>
+          <span>星星连线</span>
+          <strong id="summarySketch">0</strong>
+        </div>
       </div>
       <p id="summaryLine" class="summary-line">手已经动起来了，脑子一般也会跟着松一点。</p>
+      <div class="summary-panels">
+        <section class="summary-panel-block">
+          <p class="summary-section-title">历史最佳</p>
+          <div id="summaryLeaderboard" class="summary-leaderboard"></div>
+        </section>
+        <section class="summary-panel-block">
+          <div class="summary-history-wrap">
+            <p class="summary-history-title">最近记录</p>
+            <div id="summaryHistory" class="summary-history"></div>
+          </div>
+        </section>
+      </div>
       <div class="summary-actions">
+        <button id="summaryCopyBtn" class="mode-mini-btn">复制分享文案</button>
+        <button id="summaryExportBtn" class="mode-mini-btn">导出分享卡</button>
         <button id="summaryCloseBtn" class="ghost-btn">继续玩</button>
         <button id="summaryResetBtn" class="mode-mini-btn subtle">重新开一轮</button>
       </div>
