@@ -13,6 +13,7 @@ const soundBtn = document.getElementById('soundBtn');
 const startScreen = document.getElementById('startScreen');
 const startBtn = document.getElementById('startBtn');
 const startResumeBtn = document.getElementById('startResumeBtn');
+const startDailyBtn = document.getElementById('startDailyBtn');
 const startWoodfishBtn = document.getElementById('startWoodfishBtn');
 const startHintEl = document.getElementById('startHint');
 const playgroundWrap = document.querySelector('.playground-wrap');
@@ -97,6 +98,27 @@ const state = {
 };
 
 let rememberedStartMode = 'bubble';
+let rememberedDailyMode = 'bubble';
+const launchParams = new URLSearchParams(window.location.search);
+
+function getLaunchMode() {
+  const rawMode = launchParams.get('mode');
+  if (rawMode && modeMeta[rawMode]) return rawMode;
+
+  const start = launchParams.get('start');
+  if (start === 'resume') return rememberedStartMode;
+  if (start === 'woodfish') return 'woodfish';
+  if (start === 'daily') return rememberedDailyMode;
+
+  const focus = launchParams.get('focus');
+  if (focus === 'daily') return rememberedDailyMode;
+
+  return rememberedStartMode;
+}
+
+function shouldAutoStart() {
+  return launchParams.has('mode') || launchParams.has('start') || launchParams.has('focus');
+}
 
 const calmingLines = [
   '你不是机器，偶尔卡一下很正常。',
@@ -1558,6 +1580,11 @@ startResumeBtn.addEventListener('click', () => {
   playCalmChime();
   resetRun(rememberedStartMode);
 });
+startDailyBtn.addEventListener('click', () => {
+  hideStartScreen();
+  playCalmChime();
+  resetRun(rememberedDailyMode);
+});
 startWoodfishBtn.addEventListener('click', () => {
   hideStartScreen();
   playCalmChime();
@@ -2352,13 +2379,19 @@ if (startResumeBtn) {
   startResumeBtn.textContent = '继续上次模式';
   startResumeBtn.title = `上次模式：${modeMeta[rememberedStartMode].title}`;
 }
-if (startHintEl) {
-  startHintEl.textContent = `上次停在 ${modeMeta[rememberedStartMode].title}，这次可以接着来。`;
-}
 
 state.bestScore = loadBestScore();
 bestScoreEl.textContent = state.bestScore;
 loadDailyChallenge();
+rememberedDailyMode = modeMeta[state.dailyChallenge?.mode] ? state.dailyChallenge.mode : 'bubble';
+if (startDailyBtn) {
+  startDailyBtn.textContent = '去今日挑战';
+  startDailyBtn.title = `今日挑战：${state.dailyChallenge?.title || modeMeta[rememberedDailyMode].title}`;
+}
+if (startHintEl) {
+  const dailyLabel = state.dailyChallenge ? `今天的挑战是 ${state.dailyChallenge.title}` : '今天的挑战已经准备好了';
+  startHintEl.textContent = `上次停在 ${modeMeta[rememberedStartMode].title}，${dailyLabel}。`;
+}
 renderAchievements();
 renderRunHistory();
 renderLeaderboard();
@@ -2368,11 +2401,11 @@ evaluateAchievements();
 
 window.addEventListener('keydown', (event) => {
   if (event.repeat) return;
-if (event.key === '1') resetRun('bubble');
-if (event.key === '2') resetRun('worry');
-if (event.key === '3') resetRun('squish');
-if (event.key === '4') resetRun('woodfish');
-if (event.key === '5') resetRun('sketch');
+  if (event.key === '1') resetRun('bubble');
+  if (event.key === '2') resetRun('worry');
+  if (event.key === '3') resetRun('squish');
+  if (event.key === '4') resetRun('woodfish');
+  if (event.key === '5') resetRun('sketch');
   if (event.key === 'Escape' && !summaryModal.classList.contains('hidden')) {
     closeSummary();
   }
@@ -2390,5 +2423,9 @@ if (event.key === '5') resetRun('sketch');
   }
 });
 
-setMode(rememberedStartMode);
+const initialMode = getLaunchMode();
+setMode(initialMode);
+if (shouldAutoStart()) {
+  hideStartScreen();
+}
 loop();

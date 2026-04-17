@@ -19,6 +19,11 @@
 
 如果把这个仓库启用 GitHub Pages，站点首页就是仓库根目录的 `index.html`，游戏入口在 `play/index.html`。
 
+## 快速入口
+
+- `play/index.html?start=resume`：继续上次模式
+- `play/index.html?focus=daily`：直接进入今日挑战
+
 ## 体验优化
 
 - 支持系统的 `prefers-reduced-motion`，低动效模式会自动减少特效和抖动
