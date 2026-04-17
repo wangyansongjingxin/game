@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3分钟解压屋</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="startScreen" class="start-screen">
+    <div class="start-card card">
+      <p class="eyebrow">欢迎来到解压现场</p>
+      <h2>3分钟解压屋</h2>
+      <p class="start-copy">五个模式随便挑：点气泡、炸烦恼、甩果冻、敲木鱼、连星星。目标不是通关，是把脑袋里的毛线团先理顺一点。</p>
+      <div class="start-badges">
+        <span>轻松上手</span>
+        <span>支持手机</span>
+        <span>可本地存最高分</span>
+      </div>
+      <div class="start-actions">
+        <button id="startBtn" class="ghost-btn">开始解压</button>
+        <button id="startWoodfishBtn" class="mode-btn start-alt-btn">先敲木鱼</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">小游戏第三版</p>
+        <h1>3分钟解压屋</h1>
+        <p class="subtitle">点一点、拖一拖，把今天的烦闷弹飞。</p>
+      </div>
+      <button id="calmBtn" class="ghost-btn">来一句安慰</button>
+    </header>
+
+    <section class="stats">
+      <div class="card stat-card">
+        <span>解压值</span>
+        <strong id="score">0</strong>
+      </div>
+      <div class="card stat-card">
+        <span>连击</span>
+        <strong id="combo">0</strong>
+      </div>
+      <div class="card stat-card">
+        <span>已粉碎烦恼</span>
+        <strong id="worryCount">0</strong>
+      </div>
+      <div class="card stat-card highlight-card">
+        <span>本地最高分</span>
+        <strong id="bestScore">0</strong>
+      </div>
+    </section>
+
+    <section class="modes">
+      <button class="mode-btn active" data-mode="bubble">气泡狂点</button>
+      <button class="mode-btn" data-mode="worry">烦恼粉碎机</button>
+      <button class="mode-btn" data-mode="squish">拖拽果冻</button>
+      <button class="mode-btn" data-mode="woodfish">电子木鱼</button>
+      <button class="mode-btn" data-mode="sketch">星轨连线</button>
+    </section>
+
+    <section class="mode-hero card">
+      <div class="mode-hero-main">
+        <div id="modeIcon" class="mode-icon">🫧</div>
+        <div>
+          <p id="modeBadge" class="mode-badge">轻松上手</p>
+          <h2 id="modeTitle">气泡狂点</h2>
+          <p id="modeSubtext" class="mode-subtext">适合先把手感热起来，连点两分钟就能进入状态。</p>
+        </div>
+      </div>
+      <div class="mode-hero-actions">
+        <button id="summaryBtn" class="mode-mini-btn">本轮总结</button>
+        <button id="pauseBtn" class="mode-mini-btn subtle">暂停</button>
+        <button id="resetBtn" class="mode-mini-btn subtle">重新开一轮</button>
+      </div>
+    </section>
+
+    <section class="daily-panel card">
+      <div class="daily-header">
+        <div>
+          <p class="eyebrow">今日挑战</p>
+          <h2 id="dailyTitle">加载中</h2>
+        </div>
+        <span id="dailyStatus" class="daily-status">进行中</span>
+      </div>
+      <p id="dailyMode" class="daily-mode">—</p>
+      <p id="dailyDesc" class="daily-desc">今天的目标会根据日期自动变化。</p>
+      <div class="daily-progress">
+        <div class="progress-bar daily-progress-bar">
+          <div id="dailyProgressFill" class="progress-fill"></div>
+        </div>
+        <div class="daily-progress-meta">
+          <span id="dailyProgressText">0 / 0</span>
+          <button id="dailyJumpBtn" class="mode-mini-btn subtle">去完成</button>
+        </div>
+      </div>
+      <p id="dailyReward" class="daily-reward">完成后会拿到一个小奖励。</p>
+    </section>
+
+    <main class="playground-wrap card">
+      <canvas id="gameCanvas" width="1000" height="620"></canvas>
+      <div id="overlayTip" class="overlay-tip">点击气泡试试手感</div>
+      <button id="soundBtn" class="sound-btn">🔊 音效开</button>
+      <div id="toast" class="toast hidden"></div>
+      <div id="comboBreak" class="combo-break hidden">连击断了，没事，下一波继续</div>
+    </main>
+
+    <section class="bottom-panels">
+      <div class="card panel">
+        <h2>玩法</h2>
+        <p id="modeDescription">疯狂点爆飘起来的气泡，越快越爽，连击越高特效越夸张。</p>
+      </div>
+      <div class="card panel">
+        <h2>轻松提示</h2>
+        <p id="calmText">今天先别要求自己完美，先把一口气呼出来。</p>
+      </div>
+    </section>
+
+    <section class="achievement-panel card">
+      <div class="achievement-header">
+        <div>
+          <p class="eyebrow">成就墙</p>
+          <h2>今天拿到的奖励</h2>
+        </div>
+        <span id="achievementCount" class="achievement-count">0 / 8</span>
+      </div>
+      <div id="achievementList" class="achievement-list"></div>
+    </section>
+  </div>
+
+  <div id="summaryModal" class="summary-modal hidden">
+    <div class="summary-card card">
+      <p class="eyebrow">本轮总结</p>
+      <h2>今天已经比刚打开时轻一点了</h2>
+      <div class="summary-grid">
+        <div>
+          <span>本轮解压值</span>
+          <strong id="summaryScore">0</strong>
+        </div>
+        <div>
+          <span>最高连击</span>
+          <strong id="summaryBestCombo">0</strong>
+        </div>
+        <div>
+          <span>粉碎烦恼</span>
+          <strong id="summaryWorries">0</strong>
+        </div>
+        <div>
+          <span>木鱼次数</span>
+          <strong id="summaryWoodfish">0</strong>
+        </div>
+        <div>
+          <span>星星连线</span>
+          <strong id="summarySketch">0</strong>
+        </div>
+      </div>
+      <p id="summaryLine" class="summary-line">手已经动起来了，脑子一般也会跟着松一点。</p>
+      <div class="summary-panels">
+        <section class="summary-panel-block">
+          <p class="summary-section-title">历史最佳</p>
+          <div id="summaryLeaderboard" class="summary-leaderboard"></div>
+        </section>
+        <section class="summary-panel-block">
+          <div class="summary-history-wrap">
+            <p class="summary-history-title">最近记录</p>
+            <div id="summaryHistory" class="summary-history"></div>
+          </div>
+        </section>
+      </div>
+      <div class="summary-actions">
+        <button id="summaryCopyBtn" class="mode-mini-btn">复制分享文案</button>
+        <button id="summaryExportBtn" class="mode-mini-btn">导出分享卡</button>
+        <button id="summaryCloseBtn" class="ghost-btn">继续玩</button>
+        <button id="summaryResetBtn" class="mode-mini-btn subtle">重新开一轮</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
