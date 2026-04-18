@@ -17,7 +17,7 @@ const startDailyBtn = document.getElementById('startDailyBtn');
 const startWoodfishBtn = document.getElementById('startWoodfishBtn');
 const startHintEl = document.getElementById('startHint');
 const playgroundWrap = document.querySelector('.playground-wrap');
-const modeBtns = [...document.querySelectorAll('.mode-btn')];
+const modeBtns = [...document.querySelectorAll('.modes .mode-btn')];
 const modeIconEl = document.getElementById('modeIcon');
 const modeBadgeEl = document.getElementById('modeBadge');
 const modeTitleEl = document.getElementById('modeTitle');
@@ -31,6 +31,7 @@ const summaryBestComboEl = document.getElementById('summaryBestCombo');
 const summaryWorriesEl = document.getElementById('summaryWorries');
 const summaryWoodfishEl = document.getElementById('summaryWoodfish');
 const summarySketchEl = document.getElementById('summarySketch');
+const summaryScratchEl = document.getElementById('summaryScratch');
 const summaryLineEl = document.getElementById('summaryLine');
 const summaryLeaderboardEl = document.getElementById('summaryLeaderboard');
 const summaryHistoryEl = document.getElementById('summaryHistory');
@@ -49,6 +50,9 @@ const dailyProgressFillEl = document.getElementById('dailyProgressFill');
 const dailyStatusEl = document.getElementById('dailyStatus');
 const dailyRewardEl = document.getElementById('dailyReward');
 const dailyJumpBtn = document.getElementById('dailyJumpBtn');
+
+const scratchCanvas = document.createElement('canvas');
+const scratchCtx = scratchCanvas.getContext('2d');
 
 const state = {
   mode: 'bubble',
@@ -95,6 +99,17 @@ const state = {
   lastSketchPoint: null,
   sketchTargets: [],
   sketchCollected: 0,
+  scratchCards: 0,
+  scratchProgress: 0,
+  scratchRevealedCells: 0,
+  scratchGrid: [],
+  scratchGridCols: 28,
+  scratchGridRows: 18,
+  scratchCard: null,
+  scratchDrawing: false,
+  scratchLastPoint: null,
+  scratchLocked: false,
+  scratchNextAt: 0,
 };
 
 let rememberedStartMode = 'bubble';
@@ -133,7 +148,8 @@ const modeDescriptions = {
   worry: '把烦恼词条一个个戳爆，越炸越解气，屏幕会帮你把它们送走。',
   squish: '抓住软乎乎的果冻团子乱拖乱甩，松手时它还会弹回去。',
   woodfish: '电子木鱼，专治脑子嗡嗡响。点一下敲一下，给心情一个有节奏的出口。',
-  sketch: '按住拖动，把漂浮的星星连起来。线越长，夜空越亮。'
+  sketch: '按住拖动，把漂浮的星星连起来。线越长，夜空越亮。',
+  scratch: '按住并刮开卡面，一点点揭晓藏在雾层下的小礼物。'
 };
 
 const modeMeta = {
@@ -176,6 +192,14 @@ const modeMeta = {
     subtext: '沿着星光拖出长长的线，把屏幕当成夜空慢慢连起来。',
     tip: '按住并拖动，连起散落的星星',
     calm: '不用追求画得多好，连起来就已经在放松了。',
+  },
+  scratch: {
+    icon: '🎟️',
+    badge: '揭晓时刻',
+    title: '刮刮乐',
+    subtext: '把雾面一点点刮开，看看今天到底藏了什么小惊喜。',
+    tip: '按住并刮开雾层',
+    calm: '刮得慢一点也行，卡面会自己把答案放出来。',
   },
 };
 
@@ -233,6 +257,65 @@ const DAILY_CHALLENGE_POOL = [
     target: 6,
     reward: 80,
   },
+  {
+    mode: 'scratch',
+    title: '好运揭晓',
+    desc: '刮开 3 张好运卡。',
+    target: 3,
+    reward: 90,
+  },
+];
+
+const SCRATCH_COMPLETION_THRESHOLD = 0.74;
+const SCRATCH_CARD_POOL = [
+  {
+    icon: '✨',
+    title: '好运卡',
+    subtitle: '今天可以先轻一点',
+    message: '你已经比刚打开时更稳了。慢慢把这一层雾刮掉，答案会自己出来。',
+    reward: 26,
+    tone: ['#fff0c6', '#ffd88e', '#fff8ea'],
+  },
+  {
+    icon: '🫶',
+    title: '夸夸卡',
+    subtitle: '先把自己抱一下',
+    message: '先别急着挑刺，今天你能来到这里，就已经很不错了。',
+    reward: 24,
+    tone: ['#d9ebff', '#a9c7ff', '#f7fbff'],
+  },
+  {
+    icon: '🌷',
+    title: '花开卡',
+    subtitle: '慢慢来，花会开',
+    message: '把这张卡刮开，像给心里那点沉闷开一扇小窗。',
+    reward: 28,
+    tone: ['#ffdbe6', '#ffadc8', '#fff7fa'],
+  },
+  {
+    icon: '🌙',
+    title: '夜色卡',
+    subtitle: '今晚也可以柔软一点',
+    message: '把雾层擦掉，夜里会有一点点更亮的光。',
+    reward: 30,
+    tone: ['#d9d0ff', '#a79cff', '#f7f4ff'],
+  },
+  {
+    icon: '🍀',
+    title: '幸运卡',
+    subtitle: '今天也在往前',
+    message: '把卡刮开，看见的不只是好运，也有你刚刚走过来的路。',
+    reward: 32,
+    tone: ['#daf8d8', '#9fe8a7', '#f6fff6'],
+  },
+  {
+    icon: '🌈',
+    title: '彩虹卡',
+    subtitle: '一点点揭晓就够了',
+    message: '不用一次看完，慢慢刮，彩色的部分会越来越多。',
+    reward: 34,
+    tone: ['#f3dbff', '#b9b2ff', '#ffffff'],
+  },
 ];
 
 const ACHIEVEMENTS = [
@@ -279,10 +362,10 @@ const ACHIEVEMENTS = [
   {
     id: 'all-modes',
     icon: '🧭',
-    title: '五门全开',
-    desc: '五个模式都体验过，才算完整走一圈。',
-    stateText: '五个模式都玩过',
-    check: () => state.visitedModes.size >= 5,
+    title: '六门全开',
+    desc: '六个模式都体验过，才算完整走一圈。',
+    stateText: '六个模式都玩过',
+    check: () => state.visitedModes.size >= 6,
   },
   {
     id: 'best-score-300',
@@ -300,6 +383,14 @@ const ACHIEVEMENTS = [
     stateText: '完成今日挑战',
     check: () => Boolean(state.dailyChallenge?.completed),
   },
+  {
+    id: 'scratch-3',
+    icon: '🎟️',
+    title: '好运揭晓',
+    desc: '连续刮开 3 张卡片，说明你已经完全进入揭晓状态。',
+    stateText: '刮开卡片 ≥ 3',
+    check: () => state.scratchCards >= 3,
+  },
 ];
 
 function resizeCanvas() {
@@ -308,7 +399,13 @@ function resizeCanvas() {
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = Math.max(1, Math.round(rect.width * ratio));
   canvas.height = Math.max(1, Math.round(rect.height * ratio));
+  scratchCanvas.width = canvas.width;
+  scratchCanvas.height = canvas.height;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  scratchCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  if (state.mode === 'scratch' && state.scratchCard) {
+    renderScratchLayer();
+  }
 }
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 function syncReducedMotionPreference(event) {
@@ -336,6 +433,249 @@ function pick(arr) {
 
 function motionScale() {
   return state.reduceMotion ? 0.6 : 1;
+}
+
+function getScratchFrame() {
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  const frameW = Math.min(Math.max(300, w * 0.78), 520);
+  const frameH = Math.min(Math.max(220, h * 0.62), 340);
+  return {
+    x: (w - frameW) / 2,
+    y: (h - frameH) / 2,
+    w: frameW,
+    h: frameH,
+    r: 28,
+  };
+}
+
+function createScratchCard() {
+  return pick(SCRATCH_CARD_POOL);
+}
+
+function getScratchCellBounds(frame, col, row) {
+  const cellW = frame.w / state.scratchGridCols;
+  const cellH = frame.h / state.scratchGridRows;
+  return {
+    x: frame.x + col * cellW,
+    y: frame.y + row * cellH,
+    w: cellW,
+    h: cellH,
+  };
+}
+
+function resetScratchBoard() {
+  state.scratchGrid = Array.from({ length: state.scratchGridRows }, () => Array(state.scratchGridCols).fill(false));
+  state.scratchRevealedCells = 0;
+  state.scratchProgress = 0;
+  state.scratchDrawing = false;
+  state.scratchLastPoint = null;
+  state.scratchLocked = false;
+  state.scratchNextAt = 0;
+  state.scratchCard = createScratchCard();
+  renderScratchLayer();
+}
+
+function clearScratchCanvas() {
+  scratchCtx.setTransform(1, 0, 0, 1, 0, 0);
+  scratchCtx.clearRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  scratchCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+}
+
+function paintScratchOverlay(frame) {
+  const card = state.scratchCard;
+  if (!card) return;
+
+  const foil = scratchCtx.createLinearGradient(frame.x, frame.y, frame.x + frame.w, frame.y + frame.h);
+  foil.addColorStop(0, card.tone[0]);
+  foil.addColorStop(0.45, card.tone[1]);
+  foil.addColorStop(1, card.tone[2]);
+
+  scratchCtx.save();
+  scratchCtx.beginPath();
+  roundRect(frame.x, frame.y, frame.w, frame.h, frame.r, scratchCtx);
+  scratchCtx.clip();
+  scratchCtx.fillStyle = foil;
+  scratchCtx.fillRect(frame.x, frame.y, frame.w, frame.h);
+
+  scratchCtx.globalAlpha = 0.26;
+  for (let i = -frame.h; i < frame.w + frame.h; i += 18) {
+    scratchCtx.save();
+    scratchCtx.translate(frame.x + i, frame.y);
+    scratchCtx.rotate(-0.35);
+    scratchCtx.fillStyle = i % 36 === 0 ? 'rgba(255,255,255,0.36)' : 'rgba(255,255,255,0.14)';
+    scratchCtx.fillRect(0, 0, 7, frame.h * 1.4);
+    scratchCtx.restore();
+  }
+  scratchCtx.globalAlpha = 1;
+
+  scratchCtx.fillStyle = 'rgba(255,255,255,0.14)';
+  for (let i = 0; i < 10; i++) {
+    const px = frame.x + ((i * 83) % frame.w) * 0.88 + 18;
+    const py = frame.y + ((i * 47) % frame.h) * 0.86 + 16;
+    scratchCtx.beginPath();
+    scratchCtx.arc(px, py, i % 3 === 0 ? 2.6 : 1.8, 0, Math.PI * 2);
+    scratchCtx.fill();
+  }
+
+  scratchCtx.fillStyle = 'rgba(255,255,255,0.14)';
+  scratchCtx.font = '800 14px "Microsoft YaHei"';
+  scratchCtx.fillText('刮开 74% 自动揭晓', frame.x + 22, frame.y + frame.h - 18);
+  scratchCtx.restore();
+}
+
+function renderScratchLayer() {
+  clearScratchCanvas();
+  const frame = getScratchFrame();
+  paintScratchOverlay(frame);
+
+  if (!state.scratchGrid.length) return;
+  const cellW = frame.w / state.scratchGridCols;
+  const cellH = frame.h / state.scratchGridRows;
+  scratchCtx.save();
+  scratchCtx.beginPath();
+  roundRect(frame.x, frame.y, frame.w, frame.h, frame.r, scratchCtx);
+  scratchCtx.clip();
+  scratchCtx.globalCompositeOperation = 'destination-out';
+  for (let row = 0; row < state.scratchGridRows; row++) {
+    for (let col = 0; col < state.scratchGridCols; col++) {
+      if (!state.scratchGrid[row][col]) continue;
+      const cell = getScratchCellBounds(frame, col, row);
+      scratchCtx.fillRect(cell.x - 1, cell.y - 1, cell.w + 2, cell.h + 2);
+    }
+  }
+  scratchCtx.restore();
+}
+
+function revealScratchCell(col, row, frame) {
+  if (row < 0 || row >= state.scratchGridRows || col < 0 || col >= state.scratchGridCols) return 0;
+  if (state.scratchGrid[row][col]) return 0;
+  state.scratchGrid[row][col] = true;
+  state.scratchRevealedCells += 1;
+  const cell = getScratchCellBounds(frame, col, row);
+  scratchCtx.save();
+  scratchCtx.setTransform(Math.min(window.devicePixelRatio || 1, 2), 0, 0, Math.min(window.devicePixelRatio || 1, 2), 0, 0);
+  scratchCtx.globalCompositeOperation = 'destination-out';
+  scratchCtx.fillRect(cell.x - 1, cell.y - 1, cell.w + 2, cell.h + 2);
+  scratchCtx.restore();
+  return 1;
+}
+
+function revealScratchAt(x, y, brushRadius = 32) {
+  const frame = getScratchFrame();
+  if (x < frame.x || x > frame.x + frame.w || y < frame.y || y > frame.y + frame.h) return 0;
+
+  const cellW = frame.w / state.scratchGridCols;
+  const cellH = frame.h / state.scratchGridRows;
+  const minCol = Math.max(0, Math.floor((x - frame.x - brushRadius) / cellW));
+  const maxCol = Math.min(state.scratchGridCols - 1, Math.floor((x - frame.x + brushRadius) / cellW));
+  const minRow = Math.max(0, Math.floor((y - frame.y - brushRadius) / cellH));
+  const maxRow = Math.min(state.scratchGridRows - 1, Math.floor((y - frame.y + brushRadius) / cellH));
+  let gained = 0;
+
+  for (let row = minRow; row <= maxRow; row++) {
+    for (let col = minCol; col <= maxCol; col++) {
+      const cell = getScratchCellBounds(frame, col, row);
+      const cx = cell.x + cell.w / 2;
+      const cy = cell.y + cell.h / 2;
+      if (Math.hypot(cx - x, cy - y) <= brushRadius + Math.max(cellW, cellH) * 0.45) {
+        gained += revealScratchCell(col, row, frame);
+      }
+    }
+  }
+
+  if (gained > 0) {
+    state.scratchProgress = state.scratchRevealedCells / (state.scratchGridCols * state.scratchGridRows);
+  }
+  return gained;
+}
+
+function completeScratchCard() {
+  if (!state.scratchCard || state.scratchLocked) return;
+  state.scratchLocked = true;
+  state.scratchCards += 1;
+  state.scratchProgress = Math.max(state.scratchProgress, 1);
+  state.scratchRevealedCells = state.scratchGridCols * state.scratchGridRows;
+  renderScratchLayer();
+  const frame = getScratchFrame();
+  const centerX = frame.x + frame.w / 2;
+  const centerY = frame.y + frame.h / 2;
+  const reward = state.scratchCard.reward + Math.round(state.scratchProgress * 10);
+  addScore(reward);
+  impact(centerX, centerY, {
+    flash: 0.18,
+    ringHue: 42,
+    ringSize: 58,
+    text: '揭晓！',
+    textHue: 38,
+  });
+  createBurst(centerX, centerY, 45, 22);
+  playSuccessSound();
+  showToast(`好运卡已揭晓：${state.scratchCard.title}`);
+  overlayTipEl.textContent = '好运已经揭晓，下一张准备中';
+  calmTextEl.textContent = pick(['把答案刮出来了，先松一口气。', '这张卡已经看完了，下一张继续慢慢来。', '揭晓的时候，心里会更亮一点。']);
+  advanceDailyChallenge(1, 'scratch');
+  evaluateAchievements();
+  state.scratchNextAt = performance.now() + 900;
+}
+
+function updateScratchCardIfNeeded(now) {
+  if (!state.scratchCard) {
+    if (state.scratchNextAt && now >= state.scratchNextAt) {
+      resetScratchBoard();
+      state.scratchNextAt = 0;
+    }
+    return;
+  }
+  if (!state.scratchLocked && state.scratchProgress >= SCRATCH_COMPLETION_THRESHOLD) {
+    completeScratchCard();
+  }
+  if (state.scratchLocked && now >= state.scratchNextAt) {
+    resetScratchBoard();
+    overlayTipEl.textContent = modeMeta.scratch.tip;
+  }
+}
+
+function scratchStroke(from, to) {
+  if (state.scratchLocked || !state.scratchCard) return;
+  const brushRadius = state.reduceMotion ? 24 : 34;
+  if (!from) {
+    const gained = revealScratchAt(to.x, to.y, brushRadius);
+    if (gained > 0) {
+      addScore(Math.max(1, Math.round(gained / 4)));
+      createTrail(to.x, to.y, 42, 28, 0.1);
+      if (Math.random() > 0.72) {
+        beep({ freq: 980, type: 'triangle', duration: 0.02, gain: 0.012, slideTo: 720 });
+      }
+    }
+    overlayTipEl.textContent = `已刮开 ${Math.floor(state.scratchProgress * 100)}%`;
+    return;
+  }
+
+  const distance = Math.hypot(to.x - from.x, to.y - from.y);
+  const step = Math.max(6, brushRadius * 0.42);
+  const segments = Math.max(1, Math.ceil(distance / step));
+  let gained = 0;
+
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const px = from.x + (to.x - from.x) * t;
+    const py = from.y + (to.y - from.y) * t;
+    gained += revealScratchAt(px, py, brushRadius);
+    createTrail(px, py, 42, brushRadius * 0.65, 0.08);
+  }
+
+  if (gained > 0) {
+    addScore(Math.max(1, Math.round(gained / 4)));
+    state.comboPulse = Math.max(state.comboPulse, 0.12 + Math.min(gained, 18) * 0.01);
+    if (Math.random() > 0.76) {
+      beep({ freq: 980, type: 'triangle', duration: 0.02, gain: 0.012, slideTo: 760 });
+    }
+    overlayTipEl.textContent = `已刮开 ${Math.floor(state.scratchProgress * 100)}%`;
+    pulseWrap(state.scratchProgress > SCRATCH_COMPLETION_THRESHOLD * 0.9 ? 'soft' : 'soft');
+    vibrate(10);
+  }
 }
 
 function ensureAudio() {
@@ -722,7 +1062,7 @@ function formatRunTime(timestamp) {
 }
 
 function recordCurrentRun() {
-  const meaningful = state.score > 0 || state.bestCombo > 0 || state.worriesCleared > 0 || state.woodfishHits > 0 || state.sketchCollected > 0;
+  const meaningful = state.score > 0 || state.bestCombo > 0 || state.worriesCleared > 0 || state.woodfishHits > 0 || state.sketchCollected > 0 || state.scratchCards > 0;
   if (!meaningful) return;
 
   const entry = {
@@ -735,6 +1075,7 @@ function recordCurrentRun() {
     worriesCleared: state.worriesCleared,
     woodfishHits: state.woodfishHits,
     sketchCollected: state.sketchCollected,
+    scratchCards: state.scratchCards,
     dailyChallenge: state.dailyChallenge ? {
       title: state.dailyChallenge.title,
       mode: state.dailyChallenge.mode,
@@ -769,7 +1110,7 @@ function renderRunHistory() {
       <div class="summary-history-item">
         <div>
           <strong>${modeInfo.icon} ${item.modeTitle}</strong>
-          <span>分数 ${item.score} · 连击 ${item.bestCombo} · 烦恼 ${item.worriesCleared} · 木鱼 ${item.woodfishHits} · 星轨 ${item.sketchCollected}</span>
+          <span>分数 ${item.score} · 连击 ${item.bestCombo} · 烦恼 ${item.worriesCleared} · 木鱼 ${item.woodfishHits} · 星轨 ${item.sketchCollected} · 刮卡 ${item.scratchCards || 0}</span>
           <span>${dailyText}</span>
         </div>
         <div class="history-meta">${formatRunTime(item.timestamp)}</div>
@@ -804,7 +1145,7 @@ function renderLeaderboard() {
         <div class="leaderboard-rank">#${index + 1}</div>
         <div class="leaderboard-main">
           <strong>${modeInfo.icon} ${item.modeTitle}</strong>
-          <span>连击 ${item.bestCombo} · 烦恼 ${item.worriesCleared} · 木鱼 ${item.woodfishHits} · 星轨 ${item.sketchCollected}</span>
+          <span>连击 ${item.bestCombo} · 烦恼 ${item.worriesCleared} · 木鱼 ${item.woodfishHits} · 星轨 ${item.sketchCollected} · 刮卡 ${item.scratchCards || 0}</span>
         </div>
         <div class="leaderboard-score">
           <strong>${item.score}</strong>
@@ -830,6 +1171,7 @@ function buildSummaryText() {
     `烦恼粉碎：${state.worriesCleared}`,
     `木鱼次数：${state.woodfishHits}`,
     `星轨连线：${state.sketchCollected}`,
+    `刮卡次数：${state.scratchCards}`,
     dailyLine,
     `成就：${state.unlockedAchievements.size}/${ACHIEVEMENTS.length}`,
     `本地最高分：${state.bestScore}`,
@@ -1180,6 +1522,7 @@ function pickSummaryLine() {
   if (state.worriesCleared >= 12) return '烦恼清掉了不少，脑袋应该轻得更明显了。';
   if (state.woodfishHits >= 20) return '木鱼敲到这个量，节奏已经开始稳住了。';
   if (state.sketchCollected >= 6) return '星轨已经连起来了，今晚的脑子应该更安静一点。';
+  if (state.scratchCards >= 3) return '好运卡已经揭开好几张了，今天也算认真来过。';
   if (state.score >= 300) return '这轮已经攒出一截不错的解压值，停一下也挺好。';
   return pick(summaryLines);
 }
@@ -1191,6 +1534,7 @@ function syncSummaryModal() {
   summaryWorriesEl.textContent = state.worriesCleared;
   summaryWoodfishEl.textContent = state.woodfishHits;
   summarySketchEl.textContent = state.sketchCollected;
+  if (summaryScratchEl) summaryScratchEl.textContent = state.scratchCards;
   summaryLineEl.textContent = pickSummaryLine();
 }
 
@@ -1238,6 +1582,15 @@ function resetRun(mode = state.mode) {
   state.sketchDrawing = false;
   state.lastSketchPoint = null;
   state.sketchCollected = 0;
+  state.scratchCards = 0;
+  state.scratchProgress = 0;
+  state.scratchRevealedCells = 0;
+  state.scratchGrid = [];
+  state.scratchCard = null;
+  state.scratchDrawing = false;
+  state.scratchLastPoint = null;
+  state.scratchLocked = false;
+  state.scratchNextAt = 0;
   state.rings = [];
   state.hitTexts = [];
   state.trails = [];
@@ -1246,6 +1599,7 @@ function resetRun(mode = state.mode) {
   worryCountEl.textContent = '0';
   updateModeHero(mode);
   setMode(mode);
+  focusPlayground('smooth');
 }
 
 function pulseWrap(kind = 'soft') {
@@ -1253,6 +1607,14 @@ function pulseWrap(kind = 'soft') {
   playgroundWrap.classList.remove('shake-soft', 'shake-strong');
   void playgroundWrap.offsetWidth;
   playgroundWrap.classList.add(kind === 'strong' ? 'shake-strong' : 'shake-soft');
+}
+
+function focusPlayground(behavior = 'smooth') {
+  if (!playgroundWrap) return;
+  playgroundWrap.scrollIntoView({
+    block: 'start',
+    behavior: state.reduceMotion ? 'auto' : behavior,
+  });
 }
 
 function vibrate(ms = 18) {
@@ -1542,6 +1904,15 @@ function setMode(mode) {
   state.sketchDrawing = false;
   state.lastSketchPoint = null;
   state.sketchCollected = 0;
+  state.scratchCards = 0;
+  state.scratchProgress = 0;
+  state.scratchRevealedCells = 0;
+  state.scratchGrid = [];
+  state.scratchCard = null;
+  state.scratchDrawing = false;
+  state.scratchLastPoint = null;
+  state.scratchLocked = false;
+  state.scratchNextAt = 0;
   state.dragBlobId = null;
   state.pointer.down = false;
   state.lastSpawnAt = 0;
@@ -1560,6 +1931,7 @@ function setMode(mode) {
   }
   if (mode === 'squish') for (let i = 0; i < (state.reduceMotion ? 3 : 5); i++) spawnBlob();
   if (mode === 'sketch') for (let i = 0; i < (state.reduceMotion ? 5 : 7); i++) spawnSketchTarget();
+  if (mode === 'scratch') resetScratchBoard();
   markModeVisited(mode);
   renderDailyChallenge();
   saveSettings();
@@ -1567,6 +1939,7 @@ function setMode(mode) {
 
 function hideStartScreen() {
   startScreen.classList.add('hidden');
+  requestAnimationFrame(() => focusPlayground('smooth'));
 }
 
 modeBtns.forEach(btn => btn.addEventListener('click', () => resetRun(btn.dataset.mode)));
@@ -1664,6 +2037,10 @@ canvas.addEventListener('pointermove', (event) => {
     handleSketchStroke(state.lastSketchPoint, state.pointer);
     state.lastSketchPoint = { x: state.pointer.x, y: state.pointer.y };
   }
+  if (state.mode === 'scratch' && state.scratchDrawing && state.pointer.down) {
+    scratchStroke(state.scratchLastPoint, state.pointer);
+    state.scratchLastPoint = { x: state.pointer.x, y: state.pointer.y };
+  }
 });
 
 canvas.addEventListener('pointerdown', (event) => {
@@ -1673,6 +2050,12 @@ canvas.addEventListener('pointerdown', (event) => {
     return;
   }
   state.pointer.down = true;
+  if (state.mode === 'scratch') {
+    state.scratchDrawing = true;
+    state.scratchLastPoint = { x: state.pointer.x, y: state.pointer.y };
+    scratchStroke(null, state.pointer);
+    return;
+  }
   if (state.mode === 'sketch') {
     state.sketchDrawing = true;
     state.lastSketchPoint = { x: state.pointer.x, y: state.pointer.y };
@@ -1708,6 +2091,11 @@ canvas.addEventListener('pointerdown', (event) => {
 
 window.addEventListener('pointerup', () => {
   state.pointer.down = false;
+  if (state.mode === 'scratch') {
+    state.scratchDrawing = false;
+    state.scratchLastPoint = null;
+    return;
+  }
   if (state.mode === 'sketch') {
     state.sketchDrawing = false;
     state.lastSketchPoint = null;
@@ -1871,6 +2259,8 @@ function update() {
         blob.stretchY += (1 - blob.stretchY) * 0.12;
       }
     });
+  } else if (state.mode === 'scratch') {
+    updateScratchCardIfNeeded(now);
   } else if (state.mode === 'sketch') {
     const sketchSpawnInterval = state.reduceMotion ? 1300 : 1000;
     const sketchCap = state.reduceMotion ? 5 : 7;
@@ -1939,14 +2329,14 @@ function update() {
   });
 }
 
-function roundRect(x, y, width, height, radius) {
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + width, y, x + width, y + height, radius);
-  ctx.arcTo(x + width, y + height, x, y + height, radius);
-  ctx.arcTo(x, y + height, x, y, radius);
-  ctx.arcTo(x, y, x + width, y, radius);
-  ctx.closePath();
+function roundRect(x, y, width, height, radius, g = ctx) {
+  g.beginPath();
+  g.moveTo(x + radius, y);
+  g.arcTo(x + width, y, x + width, y + height, radius);
+  g.arcTo(x + width, y + height, x, y + height, radius);
+  g.arcTo(x, y + height, x, y, radius);
+  g.arcTo(x, y, x + width, y, radius);
+  g.closePath();
 }
 
 function drawBackground() {
@@ -1977,6 +2367,24 @@ function drawBackground() {
     ctx.beginPath();
     ctx.arc(w * 0.82, h * 0.16, 36, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
+  } else if (state.mode === 'scratch') {
+    const foilGrad = ctx.createLinearGradient(0, 0, w, h);
+    foilGrad.addColorStop(0, '#fff8ea');
+    foilGrad.addColorStop(0.46, '#f5f0ff');
+    foilGrad.addColorStop(1, '#eef8ff');
+    ctx.fillStyle = foilGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.globalAlpha = 0.72;
+    for (let i = 0; i < 14; i++) {
+      const px = ((i * 83) % w) + 30 + Math.sin(performance.now() * 0.0007 + i) * 10;
+      const py = ((i * 47) % h) + 24 + Math.cos(performance.now() * 0.0008 + i) * 6;
+      ctx.fillStyle = i % 2 ? 'rgba(255, 190, 140, 0.18)' : 'rgba(110, 130, 255, 0.12)';
+      ctx.beginPath();
+      ctx.arc(px, py, 2 + (i % 3) * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.globalAlpha = 1;
   } else {
     const grad = ctx.createLinearGradient(0, 0, 0, h);
@@ -2090,6 +2498,91 @@ function drawSketchTargets() {
     ctx.stroke();
     ctx.restore();
   });
+}
+
+function drawScratchCard() {
+  const frame = getScratchFrame();
+  const card = state.scratchCard || SCRATCH_CARD_POOL[0];
+  const progress = Math.max(0, Math.min(1, state.scratchProgress || 0));
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(85, 95, 155, 0.16)';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 10;
+
+  const base = ctx.createLinearGradient(frame.x, frame.y, frame.x + frame.w, frame.y + frame.h);
+  base.addColorStop(0, card.tone[2]);
+  base.addColorStop(0.44, card.tone[0]);
+  base.addColorStop(1, card.tone[1]);
+  ctx.fillStyle = base;
+  roundRect(frame.x, frame.y, frame.w, frame.h, frame.r);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+  ctx.lineWidth = 2;
+  roundRect(frame.x + 1, frame.y + 1, frame.w - 2, frame.h - 2, frame.r - 1);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.58)';
+  roundRect(frame.x + 16, frame.y + 16, frame.w - 32, frame.h - 32, frame.r - 8);
+  ctx.strokeStyle = 'rgba(255,255,255,0.42)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(38,50,75,0.82)';
+  ctx.font = '900 40px "Microsoft YaHei"';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(card.icon, frame.x + 26, frame.y + 24);
+
+  ctx.fillStyle = 'rgba(38,50,75,0.96)';
+  ctx.font = '900 28px "Microsoft YaHei"';
+  ctx.fillText(card.title, frame.x + 86, frame.y + 26);
+
+  ctx.fillStyle = 'rgba(71, 84, 107, 0.88)';
+  ctx.font = '700 14px "Microsoft YaHei"';
+  ctx.fillText(card.subtitle, frame.x + 88, frame.y + 62);
+
+  drawWrappedText(ctx, card.message, frame.x + 28, frame.y + 106, frame.w - 56, 28, {
+    font: '600 22px "Microsoft YaHei"',
+    fillStyle: 'rgba(35, 44, 62, 0.88)',
+  });
+
+  const meterY = frame.y + frame.h - 52;
+  ctx.fillStyle = 'rgba(255,255,255,0.34)';
+  roundRect(frame.x + 28, meterY, frame.w - 56, 12, 6);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  roundRect(frame.x + 28, meterY, Math.max(12, (frame.w - 56) * progress), 12, 6);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(38,50,75,0.76)';
+  ctx.font = '700 14px "Microsoft YaHei"';
+  ctx.fillText(`已刮开 ${Math.floor(progress * 100)}%`, frame.x + 28, frame.y + frame.h - 30);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.66)';
+  ctx.font = '700 14px "Microsoft YaHei"';
+  ctx.textAlign = 'right';
+  ctx.fillText(`奖励 +${card.reward} 解压值`, frame.x + frame.w - 28, frame.y + frame.h - 30);
+  ctx.restore();
+
+  ctx.drawImage(scratchCanvas, 0, 0, canvas.clientWidth, canvas.clientHeight);
+
+  if (state.scratchLocked) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    roundRect(frame.x + 14, frame.y + 14, frame.w - 28, frame.h - 28, frame.r - 6);
+    ctx.fill();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '900 28px "Microsoft YaHei"';
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillText('好运已揭晓', frame.x + frame.w / 2, frame.y + frame.h / 2 - 4);
+    ctx.font = '600 15px "Microsoft YaHei"';
+    ctx.fillStyle = 'rgba(255,255,255,0.82)';
+    ctx.fillText('下一张正在准备', frame.x + frame.w / 2, frame.y + frame.h / 2 + 28);
+    ctx.restore();
+  }
 }
 
 function drawBubbles() {
@@ -2352,6 +2845,7 @@ function loop() {
     drawRibbons();
     drawSketchTargets();
   }
+  else if (state.mode === 'scratch') drawScratchCard();
   else drawWoodfish();
   drawParticles();
   drawRings();

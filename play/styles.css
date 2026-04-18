@@ -235,7 +235,7 @@ h1 { margin: 0; font-size: clamp(32px, 5vw, 54px); }
 }
 
 .modes {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-bottom: 16px;
 }
 
@@ -409,6 +409,10 @@ canvas {
   padding: 18px;
   background: rgba(232, 238, 255, 0.52);
   backdrop-filter: blur(12px);
+}
+
+.summary-modal.hidden {
+  display: none;
 }
 
 .summary-card {

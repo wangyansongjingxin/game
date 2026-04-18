@@ -99,6 +99,19 @@
       margin-top: 12px;
     }
 
+    .launch-callout {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.52);
+      border: 1px solid rgba(139, 92, 246, 0.14);
+    }
+
+    .launch-callout p {
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+
     .btn {
       display: inline-flex;
       align-items: center;
@@ -120,6 +133,11 @@
     .btn-primary {
       background: linear-gradient(135deg, var(--accent), #6366f1);
       color: #fff;
+    }
+
+    .launch-btn {
+      width: 100%;
+      font-size: 1.05rem;
     }
 
     .btn-secondary {
@@ -149,7 +167,7 @@
     <p class="eyebrow">Welcome to the decompression room</p>
     <h1>3分钟解压屋</h1>
     <p>
-      这是一个轻量的本地小游戏站点。打开后先挑一个模式，点气泡、炸烦恼、甩果冻、敲木鱼，或者连星星。
+      这是一个轻量的本地小游戏站点。默认会自动跳进可玩的页面；如果没有自动进入，就点下面的按钮手动开始。
     </p>
 
     <div class="highlights">
@@ -158,16 +176,31 @@
       <span class="chip">本地保存记录</span>
     </div>
 
+    <div class="launch-callout">
+      <a class="btn btn-primary launch-btn" href="play/index.html?mode=bubble">▶ 直接开始玩</a>
+      <p>如果没有自动跳转，先点这个按钮；点开后会直接进可玩的气泡模式。</p>
+    </div>
+
     <div class="actions">
-      <a class="btn btn-primary" href="play/index.html">进入 3分钟解压屋</a>
       <a class="btn btn-secondary" href="play/index.html?start=resume">继续上次模式</a>
       <a class="btn btn-secondary" href="play/index.html?focus=daily">今日挑战</a>
-      <a class="btn btn-secondary" href="play/index.html" target="_blank" rel="noopener">新窗口打开</a>
+      <a class="btn btn-secondary" href="play/index.html?mode=bubble" target="_blank" rel="noopener">新窗口直接开玩</a>
     </div>
 
     <div class="footer">
-      游戏本体在 <code>play/</code> 目录下；如果启用 GitHub Pages，这个页面就是站点首页。
+      游戏本体在 <a href="play/index.html">play/</a> 目录下；如果启用 GitHub Pages，这个页面就是站点首页。
     </div>
   </main>
+
+  <script>
+    (function () {
+      var target = 'play/index.html?mode=bubble';
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('noRedirect') === '1') return;
+      window.setTimeout(function () {
+        window.location.href = target;
+      }, 600);
+    })();
+  </script>
 </body>
 </html>
